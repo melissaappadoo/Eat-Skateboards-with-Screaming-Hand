@@ -23,9 +23,12 @@ Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPlayerSpeed(0.1), _
 	_pop = new SoundEffect();
 	_score = 0;
 
-	_paused = false;
-	_pKeyDown = false;
-	_started = false;
+	_menu = new Menu();
+	_menu->_paused = false;
+	_menu->_pKeyDown = false;
+	_menu->_started = false;
+	_menu->_gameOver = false;
+	_menu->_spaceKeyDown = false;
 
 	// initialise ghost character
 	for (int i = 0; i < GHOSTCOUNT; i++)
@@ -74,8 +77,8 @@ Pacman::~Pacman()
 		delete _ghosts[i];
 	}
 
-	delete _menuBackground;
-	delete _menuRectangle;
+	delete _menu->_menuBackground;
+	delete _menu->_menuRectangle;
 }
 
 void Pacman::LoadContent()
@@ -116,10 +119,10 @@ void Pacman::LoadContent()
 	_stringPosition = new Vector2(10.0f, 25.0f);
 
 	// Set Menu Parameters
-	_menuBackground = new Texture2D();
-	_menuBackground->Load("Textures/Transparency.png", false);
-	_menuRectangle = new Rect(0.0f, 0.0f, Graphics::GetViewportWidth(), Graphics::GetViewportHeight());
-	_menuStringPosition = new Vector2(Graphics::GetViewportWidth() / 2.0f, Graphics::GetViewportHeight() / 2.0f);
+	_menu->_menuBackground = new Texture2D();
+	_menu->_menuBackground->Load("Textures/Transparency.png", false);
+	_menu->_menuRectangle = new Rect(0.0f, 0.0f, Graphics::GetViewportWidth(), Graphics::GetViewportHeight());
+	_menu->_menuStringPosition = new Vector2(Graphics::GetViewportWidth() / 2.0f, Graphics::GetViewportHeight() / 2.0f);
 }
 
 // Call functions in the Update function
@@ -143,19 +146,19 @@ void Pacman::Update(int elapsedTime)
 		std::cout << "_dead member sound effect has not loaded" << std::endl;
 	}
 
-	if (!_started)
+	if (!_menu->_started)
 	{
 		//check for start
-		if (keyboardState->IsKeyDown(Input::Keys::RETURN))
+		if (keyboardState->IsKeyDown(Input::Keys::SPACE))
 		{
-			_started = true;
+			_menu->_started = true;
 		}
 	}
 	else
 	{
 		CheckPaused(keyboardState, Input::Keys::P);
 
-		if (!_paused)
+		if (!_menu->_paused && !_menu->_gameOver)
 		{
 			Input(elapsedTime, keyboardState, mouseState);
 			UpdatePlayer(elapsedTime);
@@ -180,6 +183,10 @@ void Pacman::Update(int elapsedTime)
 			{
 				UpdateMunchies(_munchies[i], elapsedTime);
 			}
+		}
+		else
+		{
+			CheckReset(keyboardState, Input::Keys::SPACE);
 		}
 	}
 }
@@ -227,14 +234,26 @@ void Pacman::Input(int elapsedTime, Input::KeyboardState* keyboardState, Input::
 
 void Pacman::CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey)
 {
-	if (state->IsKeyDown(pauseKey) && !_pKeyDown)
+	if (state->IsKeyDown(pauseKey) && !_menu->_pKeyDown)
 	{
-		_pKeyDown = true;
-		_paused = !_paused;
+		_menu->_pKeyDown = true;
+		_menu->_paused = !_menu->_paused;
 	}
 
 	if (state->IsKeyUp(pauseKey))
-		_pKeyDown = false;
+		_menu->_pKeyDown = false;
+}
+
+void Pacman::CheckReset(Input::KeyboardState* state, Input::Keys resetKey)
+{
+	if (state->IsKeyDown(resetKey) && !_menu->_spaceKeyDown)
+	{
+		_menu->_spaceKeyDown = true;
+		Reset();
+	}
+
+	if (state->IsKeyUp(resetKey))
+		_menu->_spaceKeyDown = false;
 }
 
 void Pacman::CheckViewportCollision()
@@ -324,6 +343,8 @@ void Pacman::UpdateGhost(MovingEnemy* ghost, int elapsedTime)
 	{
 		ghost->direction = 0; // Change direction
 	}
+
+	ghost->sourceRect->Y = ghost->sourceRect->Height * ghost->direction;
 }
 
 void Pacman::CheckGhostCollisions()
@@ -350,6 +371,7 @@ void Pacman::CheckGhostCollisions()
 		if ((bottom1 > top2) && (top1 < bottom2) && (right1 > left2) && (left1 < right2))
 		{
 			_player->dead = true;
+			_menu->_gameOver = true;
 			i = GHOSTCOUNT;
 			Audio::Play(_dead);
 		}
@@ -381,6 +403,13 @@ bool Pacman::CollisionCheck(int x1, int y1, int width1, int height1, int x2, int
 
 }
 
+void Pacman::Reset()
+{
+	_player->position = new Vector2(350.0f, 350.0f);
+	_player->dead = false;
+	_menu->_gameOver = false;
+}
+
 void Pacman::Draw(int elapsedTime)
 {
 	// Allows us to easily create a string
@@ -400,28 +429,37 @@ void Pacman::Draw(int elapsedTime)
 		SpriteBatch::Draw(_munchies[i]->texture, _munchies[i]->position, _munchies[i]->rect);
 	}
 
-	if (_paused)
-	{
-		std::stringstream menuStream;
-		menuStream << "PAUSED!";
-
-		SpriteBatch::Draw(_menuBackground, _menuRectangle, nullptr);
-		SpriteBatch::DrawString(menuStream.str().c_str(), _menuStringPosition, Color::Red);
-	}
-
-	if (!_started)
-	{
-		std::stringstream menuStream;
-		menuStream << "START";
-
-		SpriteBatch::Draw(_menuBackground, _menuRectangle, nullptr);
-		SpriteBatch::DrawString(menuStream.str().c_str(), _menuStringPosition, Color::Green);
-	}
-
 	//draw ghosts
 	for (int i = 0; i < GHOSTCOUNT; i++)
 	{
 		SpriteBatch::Draw(_ghosts[i]->texture, _ghosts[i]->position, _ghosts[i]->sourceRect);
+	}
+
+	if (_menu->_paused)
+	{
+		std::stringstream menuStream;
+		menuStream << "PAUSED!";
+
+		SpriteBatch::Draw(_menu->_menuBackground, _menu->_menuRectangle, nullptr);
+		SpriteBatch::DrawString(menuStream.str().c_str(), _menu->_menuStringPosition, Color::Red);
+	}
+
+	if (!_menu->_started)
+	{
+		std::stringstream menuStream;
+		menuStream << "START";
+
+		SpriteBatch::Draw(_menu->_menuBackground, _menu->_menuRectangle, nullptr);
+		SpriteBatch::DrawString(menuStream.str().c_str(), _menu->_menuStringPosition, Color::Green);
+	}
+
+	if (_menu->_gameOver)
+	{
+		std::stringstream menuStream;
+		menuStream << "GAME OVER";
+
+		SpriteBatch::Draw(_menu->_menuBackground, _menu->_menuRectangle, nullptr);
+		SpriteBatch::DrawString(menuStream.str().c_str(), _menu->_menuStringPosition, Color::Red);
 	}
 
 	// Draws String

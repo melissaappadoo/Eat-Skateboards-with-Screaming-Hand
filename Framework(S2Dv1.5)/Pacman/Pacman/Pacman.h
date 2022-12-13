@@ -74,19 +74,27 @@ private:
 	// Position for String
 	Vector2* _stringPosition;
 
-	// Data for Menu
-	Texture2D* _menuBackground;
-	Rect* _menuRectangle;
-	Vector2* _menuStringPosition;
-	bool _paused;
-	bool _pKeyDown;
-	bool _started;
+	struct Menu
+	{
+		// Data for Menu
+		Texture2D* _menuBackground;
+		Rect* _menuRectangle;
+		Vector2* _menuStringPosition;
+		bool _paused;
+		bool _pKeyDown;
+		bool _started;
+		bool _gameOver;
+		bool _spaceKeyDown;
+	};
+
+	Menu* _menu;
 
 	//Input methods
 	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
 	//Check methods
 	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey);
+	void CheckReset(Input::KeyboardState* state, Input::Keys resetKey);
 	void CheckViewportCollision();
 	void CheckGhostCollisions();
 
@@ -97,6 +105,8 @@ private:
 
 	//Collision methods
 	bool CollisionCheck(int x1, int y1, int width1, int height1, int x2, int y2, int width2, int height2);
+
+	void Reset();
 
 
 public:
