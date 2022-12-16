@@ -4,7 +4,7 @@
 #include <time.h>
 #include <iostream>
 
-Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPlayerSpeed(0.1), _cPlayerFrameTime(250), _cColFrameTime(500), _cPointValue(10)
+Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPlayerSpeed(0.1), _cPlayerFrameTime(250), _cColFrameTime(500), _cPointValue(10), _cEnemyFrameTime(250)
 {
 	_player = new Player();
 	_player->dead = false;
@@ -36,6 +36,8 @@ Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPlayerSpeed(0.1), _
 		_ghosts[i] = new MovingEnemy();
 		_ghosts[i]->direction = 0;
 		_ghosts[i]->speed = 0.2f;
+		_ghosts[i]->currentFrameTime = 0;
+		_ghosts[i]->frame = 0;
 	}
 	_dead = new SoundEffect();
 
@@ -109,11 +111,11 @@ void Pacman::LoadContent()
 	for (int i = 0; i < GHOSTCOUNT; i++)
 	{
 		_ghosts[i]->texture = new Texture2D();
-		_ghosts[i]->texture->Load("Textures/GhostBlue.png", false);
+		_ghosts[i]->texture->Load("Textures/NewGhostBlue.png", false);
 		_ghosts[i]->position = new Vector2((rand() % Graphics::GetViewportWidth()), (rand() % Graphics::GetViewportHeight()));
 		_ghosts[i]->sourceRect = new Rect(0.0f, 0.0f, 20, 20);
 	}
-	_dead->Load("Sounds/pacman-is-dead");
+	_dead->Load("Sounds/pacman-is-dead.wav");
 
 	// Set string position
 	_stringPosition = new Vector2(10.0f, 25.0f);
@@ -344,7 +346,7 @@ void Pacman::UpdateGhost(MovingEnemy* ghost, int elapsedTime)
 		ghost->direction = 0; // Change direction
 	}
 
-	ghost->sourceRect->Y = ghost->sourceRect->Height * ghost->direction;
+	ghost->sourceRect->X = ghost->sourceRect->Width * ghost->direction;
 }
 
 void Pacman::CheckGhostCollisions()
@@ -399,6 +401,7 @@ bool Pacman::CollisionCheck(int x1, int y1, int width1, int height1, int x2, int
 		return false;
 
 	_score += _cPointValue;
+	Audio::Play(_pop);
 	return true;
 
 }

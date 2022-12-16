@@ -61,6 +61,8 @@ private:
 		Rect* sourceRect;
 		int direction;
 		float speed;
+		int frame;
+		int currentFrameTime;
 	};
 
 	Collectable* _munchies[MUNCHIECOUNT];
@@ -70,6 +72,7 @@ private:
 	const int _cPlayerFrameTime;
 	const int _cColFrameTime;
 	const int _cPointValue;
+	const int _cEnemyFrameTime;
 
 	// Position for String
 	Vector2* _stringPosition;
